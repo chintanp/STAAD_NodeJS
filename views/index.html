@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+	<meta charset="UTF-8">
+	<title>Sending files to the backend</title>
+
+	<script src="https://cdn.socket.io/socket.io-1.3.4.js"></script>
+	<script src="/javascripts/delivery.js"></script>
+
+
+</head>
+<body>
+
+	<h1>Please submit your anl file here</h1>
+	<input type="file" id="upload" />
+	<button onclick="sendfile()">Submit</button>
+
+
+<script>
+	var sendfile = function() {
+
+		var inputElement = document.getElementById("upload");
+		var fullPath = document.getElementById('upload').value;
+		var inputForm = document.getElementById("inputForm");
+
+		if (fullPath) {
+			var fileName = fullPath.split(/(\\|\/)/g).pop();
+
+			var extension = fileName.split(/(\.)/g).pop();
+
+			if(extension.toUpperCase() !== "ANL") {
+				alert("I can only work wth anl files for now, re-enter");
+				inputElement.value = "";
+				return;
+			}
+
+			var files = document.getElementById("upload").files;
+			var numFiles = files.length;
+
+			if(numFiles > 1) {
+				alert("I can only handle one file right now");
+				inputElement.value = "";
+				return;
+			}
+		}
+
+		alert(fileName);
+
+		var file = document.getElementById('upload').files[0];
+
+		var socket = io();
+
+		socket.on('connection', function(data) {
+			console.log("Connection established " + data);
+		});
+
+		socket.on('server_event', function(data) {
+			console.log("Server sent:: " + data);
+		});
+
+		socket.on('connect', function () {
+			var delivery = new Delivery(socket);
+
+			delivery.on('delivery.connect', function (delivery) {
+				/*$("input[type=submit]").click(function(evt){
+				 var file = $("input[type=file]")[0].files[0];
+				 var extraParams = {foo: 'bar'};
+				 delivery.send(file, extraParams);
+				 evt.preventDefault();
+				 });*/
+				var extraParams = {foo: 'bar'};
+				delivery.send(file, extraParams);
+
+			});
+
+			delivery.on('send.success', function(fileUID){
+				console.log("file was successfully sent.");
+			});
+
+			socket.on('file_recd', function(data) {
+				console.log("Server sent: " + data);
+			})
+		});
+	}
+</script>
+</body>
+</html>
