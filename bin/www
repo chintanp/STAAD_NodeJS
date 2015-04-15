@@ -7,7 +7,9 @@
 var app = require('../app');
 var debug = require('debug')('file-upload-exp:server');
 var http = require('http');
-
+//var fs = require('fs');
+var LineByLineReader = require('line-by-line');
+var STAAD_FILE = "";
 /**
  * Get port from environment and store in Express.
  */
@@ -99,28 +101,70 @@ function onListening() {
 io.sockets.on('connection', function(http_socket) {
 
   console.log("Connection from server");
-
   //This function is called when a socket connection is established
   http_socket.on('i am client', console.log);
-
   http_socket.emit('server_event', "This is from server");
 });
+
+// flag to determine the portion of the file // o determines the beginning
+var flag = 0;
 
 
 io.sockets.on('connection', function(socket){
 
   console.log("Connection established wth client for delivery");
-
   var delivery = dl.listen(socket);
   delivery.on('receive.success',function(file){
-
     fs.writeFile(file.name,file.buffer, function(err){
       if(err){
         console.log('File could not be saved.');
       }else{
         console.log('File saved.');
         socket.emit('file_recd', "File has been received.");
+        //      STAAD_FILE = file.name;
+
+        var liner = require('./liner');
+        var source = fs.createReadStream(file.name);
+        source.pipe(liner);
+        liner.on('readable', function () {
+          var line;
+          while (line = liner.read()) {
+            console.log("Reading line by line");
+            console.log(line);
+
+            var joint_index = line.indexOf("JOINT COORDINATES");
+            if(joint_index != -1) {
+
+              /*while(true) {
+
+                line = liner.read();
+
+                var page_index = line.indexOf("PAGE");
+                var member_index = line.indexOf("MEMBER INCIDENCES");
+
+                if(page_index != -1 || line == "") {
+
+                  console.log("Empty line or PAGE line found");
+                  continue;
+                }
+
+                if(member_index != -1) {
+
+                  console.log("Member incidences found, read all joint coordinates");
+                  break;
+                }
+
+
+              }*/
+              continue;
+
+            }
+          }
+        })
       };
     });
   });
 });
+
+
+

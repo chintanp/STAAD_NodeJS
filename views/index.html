@@ -44,7 +44,7 @@
 			}
 		}
 
-		alert(fileName);
+//		alert(fileName);
 
 		var file = document.getElementById('upload').files[0];
 
@@ -75,6 +75,8 @@
 
 			delivery.on('send.success', function(fileUID){
 				console.log("file was successfully sent.");
+				socket.disconnect();
+				return;
 			});
 
 			socket.on('file_recd', function(data) {
