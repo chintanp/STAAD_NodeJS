@@ -33,3 +33,27 @@ lr.on('line', function (line) {
 	 lr.resume();
 	 }, 100);*/
 });
+
+
+
+/*while(true) {
+
+ line = liner.read();
+
+ var page_index = line.indexOf("PAGE");
+ var member_index = line.indexOf("MEMBER INCIDENCES");
+
+ if(page_index != -1 || line == "") {
+
+ console.log("Empty line or PAGE line found");
+ continue;
+ }
+
+ if(member_index != -1) {
+
+ console.log("Member incidences found, read all joint coordinates");
+ break;
+ }
+
+
+ }*/

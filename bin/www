@@ -8,7 +8,7 @@ var app = require('../app');
 var debug = require('debug')('file-upload-exp:server');
 var http = require('http');
 //var fs = require('fs');
-var LineByLineReader = require('line-by-line');
+//var LineByLineReader = require('line-by-line');
 var STAAD_FILE = "";
 /**
  * Get port from environment and store in Express.
@@ -106,9 +106,55 @@ io.sockets.on('connection', function(http_socket) {
   http_socket.emit('server_event', "This is from server");
 });
 
-// flag to determine the portion of the file // o determines the beginning
+// flag to determine the portion of the file // 0 determines the beginning, 1 Joint coordinates, 2 member incidences, and 3 later
 var flag = 0;
 
+/*
+  Variables for Regular Expressions
+ */
+
+
+var str_space_single = "(\\s)";
+var str_space_many = "(\\s+)";
+var str_space_some = "(\\s*)";
+var str_space_opt = "(\\s)?";
+
+var str_digit_single = "(\\d)";
+var str_digit_many = "(\\d+)";
+var str_digit_some = "(\\d*)";
+var str_digit_opt = "(\\d)?";
+
+var str_dot = "(\\.)";
+var str_dot_opt = "(\\.)?";
+
+var str_plus_or_minus = "(\\+|-)";
+var str_plus_or_minus_opt = "(\\+|-)?";
+
+var str_semicolon_opt = "(;)?";
+var str_any_char_many = "(.*)";
+
+// A float may have a plus or minus sign, some digits, may have a dot, and then some digit
+var str_float = str_plus_or_minus_opt + str_digit_some + str_dot_opt + str_digit_some;
+
+// Line number is appears in the beginning and may have spaces in the beginning and a dot in the end.
+var str_line_number = str_space_some + str_digit_some + str_dot;
+
+// space + node number + space + x coord + space + y coord + space + z coord + ;(opt)
+var str_node_number_coords = str_space_single + str_digit_many + str_space_single + str_float + str_space_single + str_float + str_space_single + str_float + str_semicolon_opt;
+var str_node_number_coords_and = str_node_number_coords + str_any_char_many;
+var str_node_number_coords_many = "(" + str_space_single + str_digit_many + str_space_single + str_float + str_space_single + str_float + str_space_single + str_float + str_semicolon_opt + ")+";
+
+var str_node_data_result_line = str_line_number + str_any_char_many;
+var str_member_data_result_line = str_line_number + str_any_char_many;
+var str_member_ends = str_space_single + str_digit_some + str_space_single + str_digit_some + str_space_single + str_digit_some + str_semicolon_opt;
+var str_member_ends_and = str_member_ends + str_any_char_many;
+
+// Our regular expression testers
+
+var joint_line = new RegExp(str_node_data_result_line);
+var member_line = new RegExp(str_member_data_result_line);
+var node_coords = new RegExp(str_node_number_coords_and);
+var member_ends = new RegExp(str_member_ends_and);
 
 io.sockets.on('connection', function(socket){
 
@@ -135,28 +181,38 @@ io.sockets.on('connection', function(socket){
             var joint_index = line.indexOf("JOINT COORDINATES");
             if(joint_index != -1) {
 
-              /*while(true) {
-
-                line = liner.read();
-
-                var page_index = line.indexOf("PAGE");
-                var member_index = line.indexOf("MEMBER INCIDENCES");
-
-                if(page_index != -1 || line == "") {
-
-                  console.log("Empty line or PAGE line found");
-                  continue;
-                }
-
-                if(member_index != -1) {
-
-                  console.log("Member incidences found, read all joint coordinates");
-                  break;
-                }
-
-
-              }*/
+              console.log("Read Joint coordinates, updating flag");
+              flag = 1;
               continue;
+
+            }
+
+            if(flag == 1) {
+
+              console.log("lines now joint coordinates");
+
+              var match_node_line = line.match(joint_line);
+              console.log("Matches are: " + match_node_line + match_node_line.length);
+
+              // strip the line number and get the coordinate data in str_remaining
+              var str_remaining = match_node_line[4];
+
+              // Parse the coordinate line data to get individual coordinates
+              while(str_remaining.length != 0) {
+
+                var match_node_set = str_remaining.match(node_coords);
+
+                var node_number = parseInt(match_node_set[2]);
+
+                for( var i = 0; i <= 13; i++) {
+                  if( match_node_set[i+4] != "undefined") {
+                    
+                  }
+                }
+                console.log();
+
+              }
+
 
             }
           }
