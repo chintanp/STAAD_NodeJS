@@ -156,6 +156,9 @@ var member_line = new RegExp(str_member_data_result_line);
 var node_coords = new RegExp(str_node_number_coords_and);
 var member_ends = new RegExp(str_member_ends_and);
 
+var nodes = new Array();
+var members = new Array();
+
 io.sockets.on('connection', function(socket){
 
   console.log("Connection established wth client for delivery");
@@ -187,6 +190,31 @@ io.sockets.on('connection', function(socket){
 
             }
 
+
+            // Empty line tester ---> /^\s*$/.test(line) from http://stackoverflow.com/questions/18724378/check-if-a-line-only-contain-whitespace-and-n-in-js-node-js
+
+            if(line.indexOf("PAGE") != -1 || /^\s*$/.test(line)) continue;
+
+            var member_index = line.indexOf("MEMBER INCIDENCES");
+
+            if(member_index != -1) {
+
+              console.log("All joint coordinates read, found member incidences");
+              flag = 2;
+              continue;
+
+            }
+
+            // Done reading joints and members
+            if( line.indexOf("DEFINE") != -1) {
+              flag = 3;
+              break;
+            }
+
+
+
+            // Read the joint coordinates here
+
             if(flag == 1) {
 
               console.log("lines now joint coordinates");
@@ -204,15 +232,82 @@ io.sockets.on('connection', function(socket){
 
                 var node_number = parseInt(match_node_set[2]);
 
-                for( var i = 0; i <= 13; i++) {
-                  if( match_node_set[i+4] != "undefined") {
-                    
+                nodes[node_number] = new Array();
+
+                var x_c = "", y_c = "", z_c = "";
+
+                for( var i = 0; i <= 3; i++) {
+
+                  // Get rid of the undefineds, replace wth empty strings
+
+                  if( typeof match_node_set[i+4] === "undefined" ) {
+
+                    match_node_set[i+4] = "";
+
                   }
+
+                  if( typeof match_node_set[i+9] === "undefined" ) {
+
+                    match_node_set[i+9] = "";
+
+                  }
+
+                  if( typeof match_node_set[i+14] === "undefined" ) {
+
+                    match_node_set[i+14] = "";
+
+                  }
+
+                  x_c = x_c + match_node_set[i+4];
+                  y_c = y_c + match_node_set[i+9];
+                  z_c = z_c + match_node_set[i+14];
                 }
+
+                var x = parseFloat(x_c);
+                var y = parseFloat(y_c);
+                var z = parseFloat(z_c);
+
+                nodes[node_number][0] = x;
+                nodes[node_number][1] = y;
+                nodes[node_number][2] = z;
+
+                str_remaining = match_node_set[19];
+
                 console.log();
 
               }
+            }
 
+            // Read the member incidences here
+            if( flag == 2) {
+
+              var match_member_line = line.match(member_line);
+
+              // strip the line number and get the member incidences in str_remaining
+              var str_remaining = match_member_line[4];
+
+              // Parse the coordinate line data to get individual coordinates
+              while(str_remaining.length != 0) {
+
+                var match_member_set = str_remaining.match(member_ends);
+
+                var member_number = parseInt(match_member_set[2]);
+
+                members[member_number] = new Array();
+
+                var member_node_left = "", member_node_right = "";
+
+                member_node_left = parseInt(match_member_set[4]);
+                member_node_right = parseInt(match_member_set[6]);
+
+                members[member_number][0] = member_node_left;
+                members[member_number][1] = member_node_right;
+
+                str_remaining = match_member_set[8];
+
+                console.log();
+
+              }
 
             }
           }
