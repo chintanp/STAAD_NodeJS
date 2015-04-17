@@ -25,8 +25,8 @@ var server = http.createServer(app);
 
 // socket.io stuff
 var io  = require('socket.io').listen(server),
-  dl  = require('delivery'),
-  fs  = require('fs');
+    dl  = require('delivery'),
+    fs  = require('fs');
 
 /**
  * Listen on provided port, on all network interfaces.
@@ -66,8 +66,8 @@ function onError(error) {
   }
 
   var bind = typeof port === 'string'
-    ? 'Pipe ' + port
-    : 'Port ' + port;
+      ? 'Pipe ' + port
+      : 'Port ' + port;
 
   // handle specific listen errors with friendly messages
   switch (error.code) {
@@ -91,8 +91,8 @@ function onError(error) {
 function onListening() {
   var addr = server.address();
   var bind = typeof addr === 'string'
-    ? 'pipe ' + addr
-    : 'port ' + addr.port;
+      ? 'pipe ' + addr
+      : 'port ' + addr.port;
   debug('Listening on ' + bind);
 }
 
@@ -110,7 +110,7 @@ io.sockets.on('connection', function(http_socket) {
 var flag = 0;
 
 /*
-  Variables for Regular Expressions
+ Variables for Regular Expressions
  */
 
 
@@ -164,17 +164,27 @@ io.sockets.on('connection', function(socket){
   console.log("Connection established wth client for delivery");
   var delivery = dl.listen(socket);
   delivery.on('receive.success',function(file){
+
     fs.writeFile(file.name,file.buffer, function(err){
+
       if(err){
+
         console.log('File could not be saved.');
-      }else{
+
+      }
+
+      else {
+
         console.log('File saved.');
         socket.emit('file_recd', "File has been received.");
-        //      STAAD_FILE = file.name;
 
         var liner = require('./liner');
         var source = fs.createReadStream(file.name);
         source.pipe(liner);
+
+        var extension = file.name.split(/(\.)/g).pop();
+        var output_file_name = "parsed" + file.name;
+
         liner.on('readable', function () {
           var line;
           while (line = liner.read()) {
@@ -186,6 +196,7 @@ io.sockets.on('connection', function(socket){
 
               console.log("Read Joint coordinates, updating flag");
               flag = 1;
+              fs.appendFile(output_file_name, "JOINT COORDINATES\n");
               continue;
 
             }
@@ -201,6 +212,7 @@ io.sockets.on('connection', function(socket){
 
               console.log("All joint coordinates read, found member incidences");
               flag = 2;
+              fs.appendFile(output_file_name, "MEMBER INCIDENCES\n");
               continue;
 
             }
@@ -208,17 +220,14 @@ io.sockets.on('connection', function(socket){
             // Done reading joints and members
             if( line.indexOf("DEFINE") != -1) {
               flag = 3;
-              break;
+              process.exit();
             }
-
-
 
             // Read the joint coordinates here
 
             if(flag == 1) {
 
               console.log("lines now joint coordinates");
-
               var match_node_line = line.match(joint_line);
               console.log("Matches are: " + match_node_line + match_node_line.length);
 
@@ -229,11 +238,8 @@ io.sockets.on('connection', function(socket){
               while(str_remaining.length != 0) {
 
                 var match_node_set = str_remaining.match(node_coords);
-
                 var node_number = parseInt(match_node_set[2]);
-
                 nodes[node_number] = new Array();
-
                 var x_c = "", y_c = "", z_c = "";
 
                 for( var i = 0; i <= 3; i++) {
@@ -266,13 +272,14 @@ io.sockets.on('connection', function(socket){
                 var x = parseFloat(x_c);
                 var y = parseFloat(y_c);
                 var z = parseFloat(z_c);
-
                 nodes[node_number][0] = x;
                 nodes[node_number][1] = y;
                 nodes[node_number][2] = z;
 
-                str_remaining = match_node_set[19];
+                // Write the data to the file
 
+                fs.appendFile(output_file_name, node_number + " " + x + " " + y + " " + z + "\n");
+                str_remaining = match_node_set[19];
                 console.log();
 
               }
@@ -290,25 +297,20 @@ io.sockets.on('connection', function(socket){
               while(str_remaining.length != 0) {
 
                 var match_member_set = str_remaining.match(member_ends);
-
                 var member_number = parseInt(match_member_set[2]);
-
-                members[member_number] = new Array();
-
+                members[member_number] = new Array();           // Initialising a two-d array
                 var member_node_left = "", member_node_right = "";
-
                 member_node_left = parseInt(match_member_set[4]);
                 member_node_right = parseInt(match_member_set[6]);
-
                 members[member_number][0] = member_node_left;
                 members[member_number][1] = member_node_right;
 
+                // Writing the data to the file
+                fs.appendFile(output_file_name, member_number + " " + member_node_left + " " + member_node_right + "\n");
                 str_remaining = match_member_set[8];
-
                 console.log();
 
               }
-
             }
           }
         })
