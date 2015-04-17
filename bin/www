@@ -182,8 +182,11 @@ io.sockets.on('connection', function(socket){
         var source = fs.createReadStream(file.name);
         source.pipe(liner);
 
+        // Outputting a text file, so convert anl to txt
         var extension = file.name.split(/(\.)/g).pop();
-        var output_file_name = "parsed" + file.name;
+        var ext_index = -1 * extension.length;
+        var fileName = file.name.slice(0, ext_index);
+        var output_file_name = "parsed_" + fileName + "txt";
 
         liner.on('readable', function () {
           var line;
@@ -196,7 +199,7 @@ io.sockets.on('connection', function(socket){
 
               console.log("Read Joint coordinates, updating flag");
               flag = 1;
-              fs.appendFile(output_file_name, "JOINT COORDINATES\n");
+              fs.appendFileSync(output_file_name, "JOINT COORDINATES\r\n");
               continue;
 
             }
@@ -212,7 +215,7 @@ io.sockets.on('connection', function(socket){
 
               console.log("All joint coordinates read, found member incidences");
               flag = 2;
-              fs.appendFile(output_file_name, "MEMBER INCIDENCES\n");
+              fs.appendFileSync(output_file_name, "MEMBER INCIDENCES\r\n");
               continue;
 
             }
@@ -220,6 +223,8 @@ io.sockets.on('connection', function(socket){
             // Done reading joints and members
             if( line.indexOf("DEFINE") != -1) {
               flag = 3;
+
+
               process.exit();
             }
 
@@ -278,7 +283,7 @@ io.sockets.on('connection', function(socket){
 
                 // Write the data to the file
 
-                fs.appendFile(output_file_name, node_number + " " + x + " " + y + " " + z + "\n");
+                fs.appendFileSync(output_file_name, node_number + " " + x + " " + y + " " + z + "\r\n");
                 str_remaining = match_node_set[19];
                 console.log();
 
@@ -306,7 +311,7 @@ io.sockets.on('connection', function(socket){
                 members[member_number][1] = member_node_right;
 
                 // Writing the data to the file
-                fs.appendFile(output_file_name, member_number + " " + member_node_left + " " + member_node_right + "\n");
+                fs.appendFileSync(output_file_name, member_number + " " + member_node_left + " " + member_node_right + "\r\n");
                 str_remaining = match_member_set[8];
                 console.log();
 
